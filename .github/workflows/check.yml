@@ -1,0 +1,55 @@
+name: VPN Gate node checks
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      max_nodes:
+        description: 'Maximum nodes to test; 0 means all'
+        required: false
+        default: '5'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: gate-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack obfuscated checker
+        run: |
+          unzip -o gate-payload.zip
+          chmod +x bin/gate-checker
+          file bin/gate-checker
+      - name: Check configuration
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+          CHECK_TOKEN: ${{ secrets.CHECK_TOKEN }}
+        run: test -n "$DOMAIN" && test -n "$CHECK_TOKEN"
+      - name: Check nodes
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+          CHECK_TOKEN: ${{ secrets.CHECK_TOKEN }}
+          CHECK_CONCURRENCY: '32'
+          CHECK_TIMEOUT: '25'
+          MAX_CHECK_NODES: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.max_nodes || '0' }}
+          PUBLIC_DIR: ${{ github.workspace }}/public
+        run: ./bin/gate-checker
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - id: deployment
+        uses: actions/deploy-pages@v4
