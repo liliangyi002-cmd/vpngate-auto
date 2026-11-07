@@ -1,0 +1,5 @@
+source_path=/workspace/deploy/gate
+source_commit=4f3f2f1
+prepared_at=2026-11-08
+source_default_vpngate_api=https://www.vpngate.net/api/iphone/
+release_type=Nuitka onefile ELF; no plaintext vpngate.py, tests, or .git history included
